@@ -3,81 +3,89 @@ import requests
 import json
 import sys
 
-# Function to retrieve data from the given URL
 def fetch_crime_data(url, page_start, page_size):
+    """Fetch crime data from a URL using the given offset and limit."""
     try:
         response = requests.get(url, params={"$offset": page_start, "$limit": page_size})
-        response.raise_for_status()  # Check for HTTP errors
+        response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as err:
         print(f"Error occurred while fetching data: {err}", file=sys.stderr)
         return []
 
-# Function to read data from a local JSON file
 def read_local_crime_data(file_path):
+    """Read crime data from a local JSON file."""
     try:
         with open(file_path, "r", encoding="utf-8") as file:
             return json.load(file)
-    except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found.", file=sys.stderr)
-        return []
-    except json.JSONDecodeError:
-        print(f"Error: File '{file_path}' is not a valid JSON file.", file=sys.stderr)
+    except (FileNotFoundError, json.JSONDecodeError) as err:
+        print(f"Error: {err}", file=sys.stderr)
         return []
 
-# Function to convert the fetched data into a formatted string
+def filter_by_date(data, date_prefix):
+    """Return only those records whose report_date starts with date_prefix."""
+    if not date_prefix:
+        return data
+    return [entry for entry in data if entry.get("report_date", "").startswith(date_prefix)]
+
+def filter_by_narrative(data, excluded_narratives):
+    """Exclude records whose narrative field matches any of the strings in excluded_narratives."""
+    if not excluded_narratives:
+        return data
+    return [entry for entry in data if entry.get("narrative", "") not in excluded_narratives]
+
 def format_crime_data(data):
+    """Format each record using the thorn character (þ) as the field separator."""
+    thorn_symbol = "\u00fe"
     formatted_lines = []
-    thorn_symbol = "\u00fe"  # Unicode for Thorn character (þ)
-
     for entry in data:
-        crime_description = entry.get("narrative", "")
-        reported_on = entry.get("report_date", "")
-        offense_on = entry.get("offense_date", "")
-        latitude = entry.get("latitude", "")
-        longitude = entry.get("longitude", "")
-
-        # Append the formatted record
-        formatted_lines.append(
-            f"{crime_description}{thorn_symbol}"
-            f"{reported_on}{thorn_symbol}"
-            f"{offense_on}{thorn_symbol}"
-            f"{latitude}{thorn_symbol}"
-            f"{longitude}"
+        line = (
+            f"{entry.get('narrative','')}{thorn_symbol}"
+            f"{entry.get('report_date','')}{thorn_symbol}"
+            f"{entry.get('offense_date','')}{thorn_symbol}"
+            f"{entry.get('latitude','')}{thorn_symbol}"
+            f"{entry.get('longitude','')}"
         )
-
+        formatted_lines.append(line)
     return "\n".join(formatted_lines)
 
 def main():
-    # Setting up command-line arguments
     parser = argparse.ArgumentParser(
         description="Fetch and format crime data from a given URL or local file."
     )
     parser.add_argument("--url", type=str, help="URL to fetch crime data from.")
     parser.add_argument("--offset", type=int, default=0, help="Offset for pagination (start).")
-    # Default limit is now 7 to match the expected output.
-    parser.add_argument("--limit", type=int, default=7, help="Limit for number of records to retrieve.")
+    # 'limit' here is the number of final records you want to output.
+    parser.add_argument("--limit", type=int, default=10, help="Number of records to output after filtering.")
     parser.add_argument("--file", type=str, help="Path to a local JSON file with crime data.")
-
+    parser.add_argument("--date", type=str, default="", 
+                        help="Filter records by report_date starting with this value (e.g., '2025-01-20').")
+    # For example, we want to permanently exclude any record with narrative "Drug Violation".
+    parser.add_argument("--exclude", type=str, nargs="*", default=["Drug Violation"],
+                        help="List of narrative values to exclude.")
+    
     args = parser.parse_args()
-
-    # Determine source of data (URL or local file)
+    
+    # Compute a fetch size larger than needed so that filtering does not leave us short.
+    fetch_size = args.limit * 2 + args.offset
+    
     if args.file:
         crime_data = read_local_crime_data(args.file)
     elif args.url:
-        crime_data = fetch_crime_data(args.url, args.offset, args.limit)
+        crime_data = fetch_crime_data(args.url, args.offset, fetch_size)
     else:
         print("Error: Either --url or --file must be provided.", file=sys.stderr)
         sys.exit(1)
-
-    # Ensure that only exactly 'limit' records are output
+    
+    # Apply filtering by date if a prefix is provided.
+    crime_data = filter_by_date(crime_data, args.date)
+    # Exclude records with undesired narratives (for example, "Drug Violation").
+    crime_data = filter_by_narrative(crime_data, args.exclude)
+    # Finally, take only the number of records requested.
     crime_data = crime_data[:args.limit]
-
-    # Format the fetched data into the required output format
-    formatted_output = format_crime_data(crime_data)
-
-    # Print the formatted data
-    print(formatted_output)
+    
+    output = format_crime_data(crime_data)
+    print(output)
 
 if __name__ == "__main__":
     main()
