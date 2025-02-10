@@ -13,6 +13,18 @@ def fetch_crime_data(url, page_start, page_size):
         print(f"Error occurred while fetching data: {err}", file=sys.stderr)
         return []
 
+# Function to read data from a local JSON file
+def read_local_crime_data(file_path):
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"Error: File '{file_path}' not found.", file=sys.stderr)
+        return []
+    except json.JSONDecodeError:
+        print(f"Error: File '{file_path}' is not a valid JSON file.", file=sys.stderr)
+        return []
+
 # Function to convert the fetched data into a formatted string
 def format_crime_data(data):
     formatted_lines = []
@@ -32,16 +44,22 @@ def format_crime_data(data):
 
 def main():
     # Setting up command-line arguments
-    parser = argparse.ArgumentParser(description="Fetch and format crime data from a given URL.")
-    parser.add_argument("--url", type=str, default="https://data.cityofgainesville.org/resource/gvua-xt9q.json",
-                        help="URL to fetch crime data from.")
+    parser = argparse.ArgumentParser(description="Fetch and format crime data from a given URL or local file.")
+    parser.add_argument("--url", type=str, help="URL to fetch crime data from.")
     parser.add_argument("--offset", type=int, default=0, help="Offset for pagination (start).")
     parser.add_argument("--limit", type=int, default=10, help="Limit for number of records to retrieve.")
+    parser.add_argument("--file", type=str, help="Path to a local JSON file with crime data.")
 
     args = parser.parse_args()
 
-    # Fetch the crime data
-    crime_data = fetch_crime_data(args.url, args.offset, args.limit)
+    # Determine source of data (URL or local file)
+    if args.file:
+        crime_data = read_local_crime_data(args.file)
+    elif args.url:
+        crime_data = fetch_crime_data(args.url, args.offset, args.limit)
+    else:
+        print("Error: Either --url or --file must be provided.", file=sys.stderr)
+        sys.exit(1)
 
     # Format the fetched data into the required output format
     formatted_output = format_crime_data(crime_data)
