@@ -10,9 +10,13 @@ def fetch_crime_data(url, page_start, page_size):
         response.raise_for_status()  # Check for HTTP errors
         return response.json()
     except requests.exceptions.RequestException as err:
-        # Handle any network or request-related errors
-        print(f"Error occurred while fetching data: {err}")
+        # Handle network or request-related errors
+        print(f"Error occurred while fetching data: {err}", file=sys.stderr)  # Send error messages to stderr
         return []  # Return an empty list on failure
+    except Exception as e:  # Catch unexpected exceptions
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        return []
+
 
 # Function to convert the fetched data into a formatted string
 def format_crime_data(data):
