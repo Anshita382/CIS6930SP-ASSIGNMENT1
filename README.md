@@ -29,6 +29,8 @@ pipenv run python main.py --url https://data.cityofgainesville.org/resource/gvua
 ```bash
 pipenv run python -m pytest -v
 ```
+## video
+https://youtu.be/fSRYOUWnA2c?si=nqvA3Eg6RhjUOeTz
 
 ## Example
 
