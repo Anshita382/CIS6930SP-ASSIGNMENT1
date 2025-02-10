@@ -1,6 +1,6 @@
 
 import unittest
-from main import process_crime_data
+from main import format_crime_data
 
 class CrimeDataParserTest(unittest.TestCase):
 
@@ -11,7 +11,7 @@ class CrimeDataParserTest(unittest.TestCase):
             {"narrative": "Another Crime", "report_date": "2025-01-02", "offense_date": "2025-01-02", "latitude": 29.5383, "longitude": -80.3792}
         ]
         
-        processed_output = process_crime_data(sample_data)
+        processed_output = format_crime_data(sample_data)
         
         # Verify that the thorn character is present and the data is formatted correctly
         self.assertIn("\u00fe", processed_output)
@@ -19,7 +19,7 @@ class CrimeDataParserTest(unittest.TestCase):
         self.assertTrue(processed_output.endswith("-80.3792"))
     
     def test_empty_data_input(self):
-        processed_output = process_crime_data([])
+        processed_output = format_crime_data([])
         self.assertEqual(processed_output, "")
 
 if __name__ == "__main__":
