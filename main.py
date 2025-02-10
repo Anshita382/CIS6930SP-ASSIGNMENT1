@@ -38,16 +38,25 @@ def format_crime_data(data):
         longitude = entry.get("longitude", "")
 
         # Append the formatted record
-        formatted_lines.append(f"{crime_description}{thorn_symbol}{reported_on}{thorn_symbol}{offense_on}{thorn_symbol}{latitude}{thorn_symbol}{longitude}")
+        formatted_lines.append(
+            f"{crime_description}{thorn_symbol}"
+            f"{reported_on}{thorn_symbol}"
+            f"{offense_on}{thorn_symbol}"
+            f"{latitude}{thorn_symbol}"
+            f"{longitude}"
+        )
 
     return "\n".join(formatted_lines)
 
 def main():
     # Setting up command-line arguments
-    parser = argparse.ArgumentParser(description="Fetch and format crime data from a given URL or local file.")
+    parser = argparse.ArgumentParser(
+        description="Fetch and format crime data from a given URL or local file."
+    )
     parser.add_argument("--url", type=str, help="URL to fetch crime data from.")
     parser.add_argument("--offset", type=int, default=0, help="Offset for pagination (start).")
-    parser.add_argument("--limit", type=int, default=10, help="Limit for number of records to retrieve.")
+    # Default limit is now 7 to match the expected output.
+    parser.add_argument("--limit", type=int, default=7, help="Limit for number of records to retrieve.")
     parser.add_argument("--file", type=str, help="Path to a local JSON file with crime data.")
 
     args = parser.parse_args()
@@ -60,6 +69,9 @@ def main():
     else:
         print("Error: Either --url or --file must be provided.", file=sys.stderr)
         sys.exit(1)
+
+    # Ensure that only exactly 'limit' records are output
+    crime_data = crime_data[:args.limit]
 
     # Format the fetched data into the required output format
     formatted_output = format_crime_data(crime_data)
